@@ -17,6 +17,8 @@
 		22E4D7FD1FA7488900C8CF5C /* LuaSkin.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4F9850E81B722CBF00F7E909 /* LuaSkin.framework */; };
 		22E4D8031FA748AC00C8CF5C /* internal.m in Sources */ = {isa = PBXBuildFile; fileRef = 22E4D7F71FA7485A00C8CF5C /* internal.m */; };
 		394FD223913AE68B92126D37 /* libPods-Hammerspoon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BC78AF8FE9DA0BD317A7528 /* libPods-Hammerspoon.a */; };
+		46652D5F24D37013005DBFB4 /* _lupa.c in Sources */ = {isa = PBXBuildFile; fileRef = 46652D5E24D37013005DBFB4 /* _lupa.c */; };
+		46652D6124D37064005DBFB4 /* libpython3.8.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46652D6024D37064005DBFB4 /* libpython3.8.a */; };
 		4C3D55B51C7F0A880023B633 /* LuaSkin.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4F9850E81B722CBF00F7E909 /* LuaSkin.framework */; };
 		4C3D55BC1C7F0AA90023B633 /* internal.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C3D55AA1C7F05D00023B633 /* internal.m */; };
 		4C3D55BF1C7F17150023B633 /* NSAppleEventDescriptor+Parsing.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C3D55AE1C7F061D0023B633 /* NSAppleEventDescriptor+Parsing.h */; };
@@ -975,6 +977,9 @@
 		22E4D7F81FA7485A00C8CF5C /* init.lua */ = {isa = PBXFileReference; lastKnownFileType = text; name = init.lua; path = extensions/midi/init.lua; sourceTree = SOURCE_ROOT; };
 		22E4D8021FA7488900C8CF5C /* libmidi.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libmidi.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		22E4D8071FA74BDA00C8CF5C /* libMIKMIDI.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libMIKMIDI.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		46652D5E24D37013005DBFB4 /* _lupa.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = _lupa.c; path = lupa/lupa/_lupa.c; sourceTree = "<group>"; };
+		46652D6024D37064005DBFB4 /* libpython3.8.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpython3.8.a; path = "../../nobackup/python/build/target-3.8/lib/libpython3.8.a"; sourceTree = "<group>"; };
+		46652D6624D3726F005DBFB4 /* python3.8 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = python3.8; sourceTree = "<group>"; };
 		4C3D55A91C7F05D00023B633 /* init.lua */ = {isa = PBXFileReference; lastKnownFileType = text; path = init.lua; sourceTree = "<group>"; };
 		4C3D55AA1C7F05D00023B633 /* internal.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = internal.m; sourceTree = "<group>"; };
 		4C3D55AD1C7F05D00023B633 /* test_javascript.lua */ = {isa = PBXFileReference; lastKnownFileType = text; path = test_javascript.lua; sourceTree = "<group>"; };
@@ -1947,6 +1952,7 @@
 			files = (
 				4F9F02BB1B3D9591009C32E5 /* LuaSkin.framework in Frameworks */,
 				394FD223913AE68B92126D37 /* libPods-Hammerspoon.a in Frameworks */,
+				46652D6124D37064005DBFB4 /* libpython3.8.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3154,6 +3160,9 @@
 		9445CA0219083251002568BB = {
 			isa = PBXGroup;
 			children = (
+				46652D6024D37064005DBFB4 /* libpython3.8.a */,
+				46652D6624D3726F005DBFB4 /* python3.8 */,
+				46652D5E24D37013005DBFB4 /* _lupa.c */,
 				4FC09F7B19F99ECE007542A6 /* docs.json */,
 				9445CA1419083251002568BB /* Hammerspoon */,
 				4F98506D1B722C4100F7E909 /* extensions */,
@@ -6697,6 +6706,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				46652D5F24D37013005DBFB4 /* _lupa.c in Sources */,
 				944A2D391989735300D8DC90 /* MJAppDelegate.m in Sources */,
 				942BF3911989E18600983892 /* MJAutoLaunch.m in Sources */,
 				9409203119A5940600B9964E /* MJVersionUtils.m in Sources */,
@@ -8338,6 +8348,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/Pods/**",
 					"$(SRCROOT)/Pods/Sentry/Sources/Sentry/include/",
+					"$(SRCROOT)/python3.8/include/python3.8",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				ONLY_ACTIVE_ARCH = YES;
@@ -8380,8 +8391,21 @@
 					"$(inherited)/**",
 					"\"$(SDKROOT)/usr/include/libxml2\"",
 					"\"$(SDK_DIR)\"/usr/include/libxml2",
+					"\"$(SRCROOT)/python3.8/include/python3.8\"",
+					"$(SRCROOT)/LuaSkin/lua-5.4.0/src",
 				);
 				INFOPLIST_FILE = "Hammerspoon/Hammerspoon-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/ASCIImage\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaAsyncSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaHTTPServer\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaLumberjack\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/MIKMIDI\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/PocketSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/Sentry\"",
+					"$(SRCROOT)/python3.8/lib",
+				);
 				MARKETING_VERSION = 0.9.78;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.hammerspoon.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = Hammerspoon;
@@ -21869,6 +21893,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/Pods/**",
 					"$(SRCROOT)/Pods/Sentry/Sources/Sentry/include/",
+					"$(SRCROOT)/python3.8/include/python3.8",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				ONLY_ACTIVE_ARCH = YES;
@@ -21936,6 +21961,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/Pods/**",
 					"$(SRCROOT)/Pods/Sentry/Sources/Sentry/include/",
+					"$(SRCROOT)/python3.8/include/python3.8",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				OTHER_LDFLAGS = (
@@ -21977,8 +22003,21 @@
 					"$(inherited)/**",
 					"\"$(SDKROOT)/usr/include/libxml2\"",
 					"\"$(SDK_DIR)\"/usr/include/libxml2",
+					"\"$(SRCROOT)/python3.8/include/python3.8\"",
+					"$(SRCROOT)/LuaSkin/lua-5.4.0/src",
 				);
 				INFOPLIST_FILE = "Hammerspoon/Hammerspoon-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/ASCIImage\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaAsyncSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaHTTPServer\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaLumberjack\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/MIKMIDI\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/PocketSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/Sentry\"",
+					"$(SRCROOT)/python3.8/lib",
+				);
 				MARKETING_VERSION = 0.9.78;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.hammerspoon.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = Hammerspoon;
@@ -22011,8 +22050,21 @@
 					"$(inherited)/**",
 					"\"$(SDKROOT)/usr/include/libxml2\"",
 					"\"$(SDK_DIR)\"/usr/include/libxml2",
+					"\"$(SRCROOT)/python3.8/include/python3.8\"",
+					"$(SRCROOT)/LuaSkin/lua-5.4.0/src",
 				);
 				INFOPLIST_FILE = "Hammerspoon/Hammerspoon-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/ASCIImage\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaAsyncSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaHTTPServer\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/CocoaLumberjack\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/MIKMIDI\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/PocketSocket\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/Sentry\"",
+					"$(SRCROOT)/python3.8/lib",
+				);
 				MARKETING_VERSION = 0.9.78;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.hammerspoon.${PRODUCT_NAME:rfc1034identifier}";

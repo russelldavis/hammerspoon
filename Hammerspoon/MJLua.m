@@ -14,7 +14,9 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvariadic-macros"
+
 #import "Sentry.h"
+
 #pragma clang diagnostic pop
 
 #import "HSLogger.h" // This should come after Sentry
@@ -23,21 +25,26 @@
 #import <libproc.h>
 #import <dlfcn.h>
 
+#import <Python/Python.h>
+
+PyMODINIT_FUNC PyInit__lupa(void);
+
 @interface MJPreferencesWindowController ()
-- (void) reflectDefaults ;
+- (void)reflectDefaults;
 @end
 
 //  static LuaSkin* MJLuaState; // we can no longer trust that this points to the correct thread -- get it anew as needed
-static HSLogger* MJLuaLogDelegate;
+static HSLogger *MJLuaLogDelegate;
 static int evalfn;
 static int completionsForWordFn;
 
-static lua_CFunction oldPanicFunction ;
+static lua_CFunction oldPanicFunction;
 
 static int refTable;
 
-static void(^loghandler)(NSString* str);
-void MJLuaSetupLogHandler(void(^blk)(NSString* str)) {
+static void (^loghandler)(NSString *str);
+
+void MJLuaSetupLogHandler(void(^blk)(NSString *str)) {
     loghandler = blk;
 }
 
@@ -54,9 +61,9 @@ void MJLuaSetupLogHandler(void(^blk)(NSString* str)) {
 /// Notes:
 ///  * If at all possible, please do allow Hammerspoon to upload crash reports to us, it helps a great deal in keeping Hammerspoon stable
 ///  * Our Privacy Policy can be found here: [http://www.hammerspoon.org/privacy.html](http://www.hammerspoon.org/privacy.html)
-static int core_uploadCrashData(lua_State* L) {
-    if (lua_isboolean(L, 1)) { HSSetUploadCrashData(lua_toboolean(L, 1)); }
-    lua_pushboolean(L, HSUploadCrashData()) ;
+static int core_uploadCrashData(lua_State *L) {
+    if (lua_isboolean(L, 1)) {HSSetUploadCrashData(lua_toboolean(L, 1));}
+    lua_pushboolean(L, HSUploadCrashData());
     return 1;
 }
 
@@ -69,9 +76,9 @@ static int core_uploadCrashData(lua_State* L) {
 ///
 /// Returns:
 ///  * True if Hammerspoon is currently (or has just been) set to launch on login or False if Hammerspoon is not.
-static int core_autolaunch(lua_State* L) {
-    if (lua_isboolean(L, 1)) { MJAutoLaunchSet(lua_toboolean(L, 1)); }
-    lua_pushboolean(L, MJAutoLaunchGet()) ;
+static int core_autolaunch(lua_State *L) {
+    if (lua_isboolean(L, 1)) {MJAutoLaunchSet(lua_toboolean(L, 1));}
+    lua_pushboolean(L, MJAutoLaunchGet());
     return 1;
 }
 
@@ -84,9 +91,9 @@ static int core_autolaunch(lua_State* L) {
 ///
 /// Returns:
 ///  * True if the icon is currently set (or has just been) to be visible or False if it is not.
-static int core_menuicon(lua_State* L) {
-    if (lua_isboolean(L, 1)) { MJMenuIconSetVisible(lua_toboolean(L, 1)); }
-    lua_pushboolean(L, MJMenuIconVisible()) ;
+static int core_menuicon(lua_State *L) {
+    if (lua_isboolean(L, 1)) {MJMenuIconSetVisible(lua_toboolean(L, 1));}
+    lua_pushboolean(L, MJMenuIconVisible());
     return 1;
 }
 
@@ -105,16 +112,16 @@ static int core_menuicon(lua_State* L) {
 ///
 /// Returns:
 ///  * True if the console is currently set (or has just been) to be always on top when visible or False if it is not.
-static int core_consoleontop(lua_State* L) {
-    if (lua_isboolean(L, 1)) { MJConsoleWindowSetAlwaysOnTop(lua_toboolean(L, 1)); }
-    lua_pushboolean(L, MJConsoleWindowAlwaysOnTop()) ;
+static int core_consoleontop(lua_State *L) {
+    if (lua_isboolean(L, 1)) {MJConsoleWindowSetAlwaysOnTop(lua_toboolean(L, 1));}
+    lua_pushboolean(L, MJConsoleWindowAlwaysOnTop());
     return 1;
 }
 
 /// hs.openAbout()
 /// Function
 /// Displays the OS X About panel for Hammerspoon; implicitly focuses Hammerspoon.
-static int core_openabout(lua_State* __unused L) {
+static int core_openabout(lua_State *__unused L) {
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     [[NSApplication sharedApplication] orderFrontStandardAboutPanel:nil];
     return 0;
@@ -123,11 +130,11 @@ static int core_openabout(lua_State* __unused L) {
 /// hs.openPreferences()
 /// Function
 /// Displays the Hammerspoon Preferences panel; implicitly focuses Hammerspoon.
-static int core_openpreferences(lua_State* __unused L) {
+static int core_openpreferences(lua_State *__unused L) {
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
-    [[MJPreferencesWindowController singleton] showWindow: nil];
+    [[MJPreferencesWindowController singleton] showWindow:nil];
 
-    return 0 ;
+    return 0;
 }
 
 /// hs.closePreferences()
@@ -139,7 +146,7 @@ static int core_openpreferences(lua_State* __unused L) {
 ///
 /// Returns:
 ///  * None
-static int core_closepreferences(lua_State* __unused L) {
+static int core_closepreferences(lua_State *__unused L) {
     [[MJPreferencesWindowController singleton].window orderOut:nil];
     return 0;
 }
@@ -153,10 +160,10 @@ static int core_closepreferences(lua_State* __unused L) {
 ///
 /// Returns:
 ///  * None
-static int core_openconsole(lua_State* L) {
-    if (!(lua_isboolean(L,1) && !lua_toboolean(L, 1)))
+static int core_openconsole(lua_State *L) {
+    if (!(lua_isboolean(L, 1) && !lua_toboolean(L, 1)))
         [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
-    [[MJConsoleWindowController singleton] showWindow: nil];
+    [[MJConsoleWindowController singleton] showWindow:nil];
     return 0;
 }
 
@@ -169,7 +176,7 @@ static int core_openconsole(lua_State* L) {
 ///
 /// Returns:
 ///  * None
-static int core_closeconsole(lua_State* L) {
+static int core_closeconsole(lua_State *L) {
     [[MJConsoleWindowController singleton].window orderOut:nil];
     return 0;
 }
@@ -196,7 +203,7 @@ static int core_open(lua_State *L) {
 /// hs.reload()
 /// Function
 /// Reloads your init-file in a fresh Lua environment.
-static int core_reload(lua_State* L) {
+static int core_reload(lua_State *L) {
     dispatch_async(dispatch_get_main_queue(), ^{
         MJLuaReplace();
     });
@@ -206,23 +213,23 @@ static int core_reload(lua_State* L) {
 /// hs.processInfo
 /// Constant
 /// A table containing read-only information about the Hammerspoon application instance currently running.
-static int push_hammerAppInfo(lua_State* L) {
+static int push_hammerAppInfo(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     NSDictionary *appInfo = @{
-                              @"version": [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"],
-                              @"build": [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"],
-                              @"resourcePath": @([[[NSBundle mainBundle] resourcePath] fileSystemRepresentation]),
-                              @"bundlePath": @([[[NSBundle mainBundle] bundlePath] fileSystemRepresentation]),
-                              @"executablePath": @([[[NSBundle mainBundle] executablePath] fileSystemRepresentation]),
-                              @"processID": @(getpid()),
-                              @"bundleID": [[NSBundle mainBundle] bundleIdentifier],
-                              @"buildTime": @(__DATE__ ", " __TIME__),
+            @"version": [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"],
+            @"build": [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"],
+            @"resourcePath": @([[[NSBundle mainBundle] resourcePath] fileSystemRepresentation]),
+            @"bundlePath": @([[[NSBundle mainBundle] bundlePath] fileSystemRepresentation]),
+            @"executablePath": @([[[NSBundle mainBundle] executablePath] fileSystemRepresentation]),
+            @"processID": @(getpid()),
+            @"bundleID": [[NSBundle mainBundle] bundleIdentifier],
+            @"buildTime": @(__DATE__ ", " __TIME__),
 #ifdef DEBUG
-                              @"debugBuild": @(YES),
+            @"debugBuild": @(YES),
 #else
-                              @"debugBuild": @(NO),
+            @"debugBuild": @(NO),
 #endif
-                              };
+    };
 
     [skin pushNSObject:appInfo];
     return 1;
@@ -239,32 +246,31 @@ static int push_hammerAppInfo(lua_State* L) {
 ///
 /// Notes:
 ///  * Since this check is done automatically when Hammerspoon loads, it is probably of limited use except for skipping things that are known to fail when Accessibility is not enabled.  Evettaps which try to capture keyUp and keyDown events, for example, will fail until Accessibility is enabled and the Hammerspoon application is relaunched.
-static int core_accessibilityState(lua_State* L) {
+static int core_accessibilityState(lua_State *L) {
 //     extern BOOL MJAccessibilityIsEnabled(void);
 //     extern void MJAccessibilityOpenPanel(void);
 
     BOOL shouldprompt = lua_toboolean(L, 1);
     BOOL enabled = MJAccessibilityIsEnabled();
-    if (shouldprompt) { MJAccessibilityOpenPanel(); }
+    if (shouldprompt) {MJAccessibilityOpenPanel();}
     lua_pushboolean(L, enabled);
     return 1;
 }
 
 // SOURCE: https://stackoverflow.com/a/58786245/6925202
-bool isScreenRecordingEnabled()
-{
+bool isScreenRecordingEnabled() {
     if (@available(macos 10.15, *)) {
         bool bRet = false;
         CFArrayRef list = CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID);
         if (list) {
-            int n = (int)(CFArrayGetCount(list));
+            int n = (int) (CFArrayGetCount(list));
             for (int i = 0; i < n; i++) {
-                NSDictionary* info = (NSDictionary*)(CFArrayGetValueAtIndex(list, (CFIndex)i));
-                NSString* name = info[(id)kCGWindowName];
-                NSNumber* pid = info[(id)kCGWindowOwnerPID];
+                NSDictionary *info = (NSDictionary *) (CFArrayGetValueAtIndex(list, (CFIndex) i));
+                NSString *name = info[(id) kCGWindowName];
+                NSNumber *pid = info[(id) kCGWindowOwnerPID];
                 if (pid != nil && name != nil) {
                     int nPid = [pid intValue];
-                    char path[PROC_PIDPATHINFO_MAXSIZE+1];
+                    char path[PROC_PIDPATHINFO_MAXSIZE + 1];
                     int lenPath = proc_pidpath(nPid, path, PROC_PIDPATHINFO_MAXSIZE);
                     if (lenPath > 0) {
                         path[lenPath] = 0;
@@ -294,7 +300,7 @@ bool isScreenRecordingEnabled()
 ///
 /// Notes:
 ///  * If you trigger the prompt and the user denies it, you cannot bring up the prompt again - the user must manually enable it in System Preferences.
-static int core_screenRecordingState(lua_State* L) {
+static int core_screenRecordingState(lua_State *L) {
     BOOL shouldprompt = lua_toboolean(L, 1);
     BOOL enabled = isScreenRecordingEnabled();
     if (shouldprompt) {
@@ -319,49 +325,44 @@ static int core_screenRecordingState(lua_State* L) {
 ///
 /// Notes:
 ///  * Will always return `true` on macOS 10.13 or earlier.
-static int core_microphoneState(lua_State* L) {
+static int core_microphoneState(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     BOOL shouldprompt = lua_toboolean(L, 1);
 
     // Request permission to access the camera and microphone.
     if (@available(macOS 10.14, *)) {
-        switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio])
-        {
-            case AVAuthorizationStatusAuthorized:
-            {
+        switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio]) {
+            case AVAuthorizationStatusAuthorized: {
                 // The user has previously granted access to the camera.
-                lua_pushboolean(L, YES) ;
+                lua_pushboolean(L, YES);
                 break;
             }
-            case AVAuthorizationStatusNotDetermined:
-            {
+            case AVAuthorizationStatusNotDetermined: {
                 if (shouldprompt) {
                     // The app hasn't yet asked the user for camera access.
                     [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
                         if (!granted) {
-                            [skin logWarn:@"Hammerspoon has been declined Microphone access by the user."] ;
+                            [skin logWarn:@"Hammerspoon has been declined Microphone access by the user."];
                         }
                     }];
                 }
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
-            case AVAuthorizationStatusDenied:
-            {
+            case AVAuthorizationStatusDenied: {
                 // The user has previously denied access.
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
-            case AVAuthorizationStatusRestricted:
-            {
+            case AVAuthorizationStatusRestricted: {
                 // The user can't grant access due to restrictions.
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
         }
     } else {
         // Fallback on earlier versions
-        lua_pushboolean(L, YES) ;
+        lua_pushboolean(L, YES);
     }
     return 1;
 }
@@ -377,49 +378,44 @@ static int core_microphoneState(lua_State* L) {
 ///
 /// Notes:
 ///  * Will always return `true` on macOS 10.13 or earlier.
-static int core_cameraState(lua_State* L) {
+static int core_cameraState(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     BOOL shouldprompt = lua_toboolean(L, 1);
 
     // Request permission to access the camera and microphone.
     if (@available(macOS 10.14, *)) {
-        switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo])
-        {
-            case AVAuthorizationStatusAuthorized:
-            {
+        switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo]) {
+            case AVAuthorizationStatusAuthorized: {
                 // The user has previously granted access to the camera.
-                lua_pushboolean(L, YES) ;
+                lua_pushboolean(L, YES);
                 break;
             }
-            case AVAuthorizationStatusNotDetermined:
-            {
+            case AVAuthorizationStatusNotDetermined: {
                 if (shouldprompt) {
                     // The app hasn't yet asked the user for camera access.
                     [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
                         if (!granted) {
-                            [skin logWarn:@"Hammerspoon has been declined Microphone access by the user."] ;
+                            [skin logWarn:@"Hammerspoon has been declined Microphone access by the user."];
                         }
                     }];
                 }
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
-            case AVAuthorizationStatusDenied:
-            {
+            case AVAuthorizationStatusDenied: {
                 // The user has previously denied access.
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
-            case AVAuthorizationStatusRestricted:
-            {
+            case AVAuthorizationStatusRestricted: {
                 // The user can't grant access due to restrictions.
-                lua_pushboolean(L, NO) ;
+                lua_pushboolean(L, NO);
                 break;
             }
         }
     } else {
         // Fallback on earlier versions
-        lua_pushboolean(L, YES) ;
+        lua_pushboolean(L, YES);
     }
     return 1;
 }
@@ -443,36 +439,36 @@ static int automaticallyChecksForUpdates(lua_State *L) {
         if ([[NSBundle bundleWithPath:frameworkPath] load]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
-            id sharedUpdater = [NSClassFromString(@"SUUpdater")  performSelector:@selector(sharedUpdater)] ;
+            id sharedUpdater = [NSClassFromString(@"SUUpdater") performSelector:@selector(sharedUpdater)];
             if (lua_isboolean(L, 1)) {
 
-            // This convoluted #$@#% is required (a) because we want to weakly link to the SparkleFramework for dev builds, and
-            // (b) because performSelector: withObject: only works when withObject: is an argument of type id or nil
+                // This convoluted #$@#% is required (a) because we want to weakly link to the SparkleFramework for dev builds, and
+                // (b) because performSelector: withObject: only works when withObject: is an argument of type id or nil
 
-            // the following is equivalent to: [sharedUpdater setAutomaticallyChecksForUpdates:lua_toboolean(L, 1)] ;
+                // the following is equivalent to: [sharedUpdater setAutomaticallyChecksForUpdates:lua_toboolean(L, 1)] ;
 
-                BOOL myBoolValue = lua_toboolean(L, 1) ;
-                NSMethodSignature * mySignature = [NSClassFromString(@"SUUpdater") instanceMethodSignatureForSelector:@selector(setAutomaticallyChecksForUpdates:)];
-                NSInvocation * myInvocation = [NSInvocation invocationWithMethodSignature:mySignature];
+                BOOL myBoolValue = lua_toboolean(L, 1);
+                NSMethodSignature *mySignature = [NSClassFromString(@"SUUpdater") instanceMethodSignatureForSelector:@selector(setAutomaticallyChecksForUpdates:)];
+                NSInvocation *myInvocation = [NSInvocation invocationWithMethodSignature:mySignature];
                 [myInvocation setTarget:sharedUpdater];
-            // even though signature specifies this, we need to specify it in the invocation, since the signature is re-usable
-            // for any method which accepts the same signature list for the target.
+                // even though signature specifies this, we need to specify it in the invocation, since the signature is re-usable
+                // for any method which accepts the same signature list for the target.
                 [myInvocation setSelector:@selector(setAutomaticallyChecksForUpdates:)];
                 [myInvocation setArgument:&myBoolValue atIndex:2];
                 [myInvocation invoke];
 
             }
-            lua_pushboolean(L, (BOOL)[sharedUpdater performSelector:@selector(automaticallyChecksForUpdates)]) ;
+            lua_pushboolean(L, (BOOL) [sharedUpdater performSelector:@selector(automaticallyChecksForUpdates)]);
 #pragma clang diagnostic pop
         } else {
-            [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."] ;
-            lua_pushboolean(L, NO) ;
+            [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."];
+            lua_pushboolean(L, NO);
         }
     } else {
-        [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."] ;
-        lua_pushboolean(L, NO) ;
+        [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."];
+        lua_pushboolean(L, NO);
     }
-    return 1 ;
+    return 1;
 }
 
 /// hs.checkForUpdates([silent]) -> none
@@ -489,7 +485,7 @@ static int automaticallyChecksForUpdates(lua_State *L) {
 ///  * If you are running a non-release or locally compiled version of Hammerspoon then the results of this function are unspecified.
 static int checkForUpdates(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
-    [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
+    [skin checkArgs:LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK];
 
     if (NSClassFromString(@"SUUpdater")) {
         NSString *frameworkPath = [[[NSBundle mainBundle] privateFrameworksPath] stringByAppendingPathComponent:@"Sparkle.framework"];
@@ -497,21 +493,21 @@ static int checkForUpdates(lua_State *L) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-            id sharedUpdater = [NSClassFromString(@"SUUpdater") performSelector:@selector(sharedUpdater)] ;
+            id sharedUpdater = [NSClassFromString(@"SUUpdater") performSelector:@selector(sharedUpdater)];
 
             SEL checkMethod = @selector(checkForUpdates:);
             if (lua_type(L, 1) == LUA_TBOOLEAN && lua_toboolean(L, 1) == YES) {
                 checkMethod = @selector(checkForUpdateInformation);
             }
-            [sharedUpdater performSelector:checkMethod withObject:nil] ;
+            [sharedUpdater performSelector:checkMethod withObject:nil];
 #pragma clang diagnostic pop
         } else {
-            [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."] ;
+            [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."];
         }
     } else {
-        [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."] ;
+        [skin logWarn:@"Sparkle Update framework not available for the running instance of Hammerspoon."];
     }
-    return 0 ;
+    return 0;
 }
 
 /// hs.updateAvailable() -> string or false, string
@@ -565,16 +561,16 @@ static int updateAvailable(lua_State *L) {
 static int canCheckForUpdates(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBREAK];
-    BOOL canUpdate = NO ;
+    BOOL canUpdate = NO;
 
     if (NSClassFromString(@"SUUpdater")) {
         NSString *frameworkPath = [[[NSBundle mainBundle] privateFrameworksPath] stringByAppendingPathComponent:@"Sparkle.framework"];
         if ([[NSBundle bundleWithPath:frameworkPath] load]) {
-            canUpdate = YES ;
+            canUpdate = YES;
         }
     }
-    lua_pushboolean(L, canUpdate) ;
-    return 1 ;
+    lua_pushboolean(L, canUpdate);
+    return 1;
 }
 
 /// hs.preferencesDarkMode([state]) -> bool
@@ -586,16 +582,16 @@ static int canCheckForUpdates(lua_State *L) {
 ///
 /// Returns:
 ///  * A boolean, true if dark mode is enabled otherwise false.
-static int preferencesDarkMode(lua_State* L) {
+static int preferencesDarkMode(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
-    [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
+    [skin checkArgs:LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK];
 
     if (lua_isboolean(L, 1)) {
         PreferencesDarkModeSetEnabled(lua_toboolean(L, 1));
-        [[MJPreferencesWindowController singleton] reflectDefaults] ;
+        [[MJPreferencesWindowController singleton] reflectDefaults];
     }
 
-    lua_pushboolean(L, PreferencesDarkModeEnabled()) ;
+    lua_pushboolean(L, PreferencesDarkModeEnabled());
     return 1;
 }
 
@@ -624,15 +620,15 @@ static int preferencesDarkMode(lua_State* L) {
 ///    tell application "Hammerspoon"
 ///      execute lua code "hs.alert([[Hello from AppleScript]])"
 ///    end tell```
-static int core_appleScript(lua_State* L) {
+static int core_appleScript(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
-    [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
+    [skin checkArgs:LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK];
 
     if (lua_isboolean(L, 1)) {
         HSAppleScriptSetEnabled(lua_toboolean(L, 1));
     }
 
-    lua_pushboolean(L, HSAppleScriptEnabled()) ;
+    lua_pushboolean(L, HSAppleScriptEnabled());
     return 1;
 }
 
@@ -648,22 +644,22 @@ static int core_appleScript(lua_State* L) {
 ///
 /// Notes:
 ///  * This only refers to dock icon clicks while Hammerspoon is already running. The console window is not opened by launching the app
-static int core_openConsoleOnDockClick(lua_State* L) {
+static int core_openConsoleOnDockClick(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
-    [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
+    [skin checkArgs:LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK];
 
     if (lua_isboolean(L, 1)) {
         HSOpenConsoleOnDockClickSetEnabled(lua_toboolean(L, 1));
     }
 
-    lua_pushboolean(L, HSOpenConsoleOnDockClickEnabled()) ;
+    lua_pushboolean(L, HSOpenConsoleOnDockClickEnabled());
     return 1;
 }
 
 /// hs.focus()
 /// Function
 /// Makes Hammerspoon the foreground app.
-static int core_focus(lua_State* L) {
+static int core_focus(lua_State *L) {
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     return 0;
 }
@@ -680,7 +676,7 @@ static int core_focus(lua_State* L) {
 static int core_getObjectMetatable(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TSTRING, LS_TBREAK];
-    luaL_getmetatable(L, lua_tostring(L,1));
+    luaL_getmetatable(L, lua_tostring(L, 1));
     return 1;
 }
 
@@ -699,76 +695,77 @@ static int core_getObjectMetatable(lua_State *L) {
 ///  * This function does not modify the original string - to actually replace it, assign the result of this function to the original string.
 ///  * This function is a more specifically targeted version of the `hs.utf8.fixUTF8(...)` function.
 static int core_cleanUTF8(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
-    [skin checkArgs:LS_TANY, LS_TBREAK] ;
-    [skin pushNSObject:[skin getValidUTF8AtIndex:1]] ;
-    return 1 ;
+    LuaSkin *skin = [LuaSkin sharedWithState:L];
+    [skin checkArgs:LS_TANY, LS_TBREAK];
+    [skin pushNSObject:[skin getValidUTF8AtIndex:1]];
+    return 1;
 }
 
-static int core_exit(lua_State* L) {
-    [[NSApplication sharedApplication] terminate: nil];
+static int core_exit(lua_State *L) {
+    [[NSApplication sharedApplication] terminate:nil];
     return 0;
 }
 
-static int core_logmessage(lua_State* L) {
+static int core_logmessage(lua_State *L) {
     size_t len;
-    const char* s = lua_tolstring(L, 1, &len);
-    NSString* str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
+    const char *s = lua_tolstring(L, 1, &len);
+    NSString *str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
     if (str == nil) {
-      core_cleanUTF8(L) ;
-      s = lua_tolstring(L, -1, &len);
-      str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
+        core_cleanUTF8(L);
+        s = lua_tolstring(L, -1, &len);
+        str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
     }
     loghandler(str);
     return 0;
 }
 
-static int core_notify(lua_State* L) {
+static int core_notify(lua_State *L) {
     size_t len;
-    const char* s = lua_tolstring(L, 1, &len);
-    NSString* str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
+    const char *s = lua_tolstring(L, 1, &len);
+    NSString *str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
     [[MJUserNotificationManager sharedManager] sendNotification:str handler:^{
-        [[MJConsoleWindowController singleton] showWindow: nil];
+        [[MJConsoleWindowController singleton] showWindow:nil];
     }];
     return 0;
 }
 
 static luaL_Reg corelib[] = {
-    {"preferencesDarkMode", preferencesDarkMode},
-    {"openConsoleOnDockClick", core_openConsoleOnDockClick},
-    {"openConsole", core_openconsole},
-    {"closeConsole", core_closeconsole},
-    {"consoleOnTop", core_consoleontop},
-    {"openAbout", core_openabout},
-    {"menuIcon", core_menuicon},
-    {"openPreferences", core_openpreferences},
-    {"closePreferences", core_closepreferences},
-    {"open", core_open},
-    {"autoLaunch", core_autolaunch},
-    {"automaticallyCheckForUpdates", automaticallyChecksForUpdates},
-    {"checkForUpdates", checkForUpdates},
-    {"updateAvailable", updateAvailable},
-    {"canCheckForUpdates", canCheckForUpdates},
-    {"allowAppleScript", core_appleScript},
-    {"reload", core_reload},
-    {"focus", core_focus},
-    {"accessibilityState", core_accessibilityState},
-    {"screenRecordingState", core_screenRecordingState},
-    {"microphoneState", core_microphoneState},
-    {"cameraState", core_cameraState},
-    {"getObjectMetatable", core_getObjectMetatable},
-    {"uploadCrashData", core_uploadCrashData},
-    {"cleanUTF8forConsole", core_cleanUTF8},
-    {"_exit", core_exit},
-    {"_logmessage", core_logmessage},
-    {"_notify", core_notify},
-    {NULL, NULL}
+        {"preferencesDarkMode", preferencesDarkMode},
+        {"openConsoleOnDockClick", core_openConsoleOnDockClick},
+        {"openConsole", core_openconsole},
+        {"closeConsole", core_closeconsole},
+        {"consoleOnTop", core_consoleontop},
+        {"openAbout", core_openabout},
+        {"menuIcon", core_menuicon},
+        {"openPreferences", core_openpreferences},
+        {"closePreferences", core_closepreferences},
+        {"open", core_open},
+        {"autoLaunch", core_autolaunch},
+        {"automaticallyCheckForUpdates", automaticallyChecksForUpdates},
+        {"checkForUpdates", checkForUpdates},
+        {"updateAvailable", updateAvailable},
+        {"canCheckForUpdates", canCheckForUpdates},
+        {"allowAppleScript", core_appleScript},
+        {"reload", core_reload},
+        {"focus", core_focus},
+        {"accessibilityState", core_accessibilityState},
+        {"screenRecordingState", core_screenRecordingState},
+        {"microphoneState", core_microphoneState},
+        {"cameraState", core_cameraState},
+        {"getObjectMetatable", core_getObjectMetatable},
+        {"uploadCrashData", core_uploadCrashData},
+        {"cleanUTF8forConsole", core_cleanUTF8},
+        {"_exit", core_exit},
+        {"_logmessage", core_logmessage},
+        {"_notify", core_notify},
+        {NULL, NULL}
 };
 
 #pragma mark - Lua environment lifecycle, high level
 
 // Create and configure a Lua environment
 void MJLuaCreate(void) {
+    PyImport_AppendInittab("lupa", &PyInit__lupa);
     MJLuaAlloc();
     MJLuaInit();
     HSNSLOG(@"Created Lua instance");
@@ -785,7 +782,7 @@ void MJLuaDestroy(void) {
 void MJLuaReplace(void) {
     MJLuaDeinit();
     MJLuaDealloc();
-    [[MJConsoleWindowController singleton] initializeConsoleColorsAndFont] ;
+    [[MJConsoleWindowController singleton] initializeConsoleColorsAndFont];
 
     MJLuaAlloc();
     MJLuaInit();
@@ -794,11 +791,11 @@ void MJLuaReplace(void) {
 # pragma mark - Lua environment lifecycle, low level
 
 static int MJLuaAtPanic(lua_State *L) {
-    HSNSLOG(@"LUA_AT_PANIC: %s", lua_tostring(L, -1)) ;
+    HSNSLOG(@"LUA_AT_PANIC: %s", lua_tostring(L, -1));
     if (oldPanicFunction)
-        return oldPanicFunction(L) ;
+        return oldPanicFunction(L);
     else
-        return 0 ;
+        return 0;
 }
 
 // Create a Lua environment with LuaSkin
@@ -811,20 +808,20 @@ void MJLuaAlloc(void) {
         skin.delegate = MJLuaLogDelegate; // FIXME: Is this needed?
         // ANS: since a new delegate object is created here, yes because LuaSkin's initWithDelegate isn't called, so the new delegate isn't assigned
         // should consider whether or not we really need to create new object but that's for another day...
-        skin = [LuaSkin sharedWithState:NULL] ; // make sure skin.L points to the main state since we just created a new one
+        skin = [LuaSkin sharedWithState:NULL]; // make sure skin.L points to the main state since we just created a new one
     }
     [MJLuaLogDelegate setLuaState:skin.L];
-    oldPanicFunction = lua_atpanic([skin L], &MJLuaAtPanic) ;
+    oldPanicFunction = lua_atpanic([skin L], &MJLuaAtPanic);
 }
 
 // Configure a Lua environment that has already been created by LuaSkin
 void MJLuaInit(void) {
-    LuaSkin *skin = [LuaSkin sharedWithState:NULL] ;
-    lua_State* L = skin.L;
+    LuaSkin *skin = [LuaSkin sharedWithState:NULL];
+    lua_State *L = skin.L;
 
     refTable = [skin registerLibrary:corelib metaFunctions:nil];
-    push_hammerAppInfo(L) ;
-    lua_setfield(L, -2, "processInfo") ;
+    push_hammerAppInfo(L);
+    lua_setfield(L, -2, "processInfo");
 
     lua_setglobal(L, "hs");
 
@@ -837,7 +834,7 @@ void MJLuaInit(void) {
         [alert setInformativeText:@"Please re-install Hammerspoon"];
         [alert setAlertStyle:NSAlertStyleCritical];
         [alert runModal];
-        [[NSApplication sharedApplication] terminate: nil];
+        [[NSApplication sharedApplication] terminate:nil];
     }
 
     lua_pushstring(L, [[[NSBundle mainBundle] pathForResource:@"extensions" ofType:nil] fileSystemRepresentation]);
@@ -845,11 +842,11 @@ void MJLuaInit(void) {
     lua_pushstring(L, [MJConfigFileFullPath() UTF8String]);
     lua_pushstring(L, [MJConfigDir() UTF8String]);
     lua_pushstring(L, [[[NSBundle mainBundle] pathForResource:@"docs" ofType:@"json"] fileSystemRepresentation]);
-    lua_pushboolean(L, [[NSFileManager defaultManager] fileExistsAtPath: MJConfigFileFullPath()]);
+    lua_pushboolean(L, [[NSFileManager defaultManager] fileExistsAtPath:MJConfigFileFullPath()]);
     lua_pushboolean(L, [[NSUserDefaults standardUserDefaults] boolForKey:HSAutoLoadExtensions]);
 
     if (lua_pcall(L, 7, 2, 0) != LUA_OK) {
-        NSString *errorMessage = [NSString stringWithFormat:@"%s", lua_tostring(L, -1)] ;
+        NSString *errorMessage = [NSString stringWithFormat:@"%s", lua_tostring(L, -1)];
         lua_pop(L, 1); // Pop the error message off the stack
         HSNSLOG(@"Error running setup.lua:%@", errorMessage);
         NSAlert *alert = [[NSAlert alloc] init];
@@ -862,6 +859,21 @@ void MJLuaInit(void) {
         evalfn = [skin luaRef:refTable];
         completionsForWordFn = [skin luaRef:refTable];
     }
+
+    Py_Initialize();
+    PyObject *stateCapsule = PyCapsule_New(L, "lua_State *", NULL);
+    if (PyErr_Occurred()) PyErr_Print();
+    PyObject *pyLocals = Py_BuildValue("{s:O}", "lua_state", stateCapsule);
+    if (PyErr_Occurred()) PyErr_Print();
+    PyRun_String(
+            "import sys, lupa; sys.modules['lua'] = lupa.LuaRuntime(state=lua_state, unpack_returned_tuples=True)",
+            Py_file_input,
+            pyLocals,
+            pyLocals
+    );
+    if (PyErr_Occurred()) PyErr_Print();
+    PyRun_String("import lua; lua.globals().hs.alert.show('testalert')", Py_file_input, pyLocals, pyLocals);
+    if (PyErr_Occurred()) PyErr_Print();
 }
 
 // Accessibility State Callback:
@@ -969,8 +981,8 @@ void MJLuaDeinit(void) {
     callShutdownCallback(skin.L);
 
     if (MJLuaLogDelegate) {
-        [skin setDelegate:nil] ;
-        MJLuaLogDelegate = nil ;
+        [skin setDelegate:nil];
+        MJLuaLogDelegate = nil;
     }
 }
 
@@ -978,11 +990,12 @@ void MJLuaDeinit(void) {
 void MJLuaDealloc(void) {
     LuaSkin *skin = [LuaSkin sharedWithState:NULL];
     [skin destroyLuaState];
+    Py_FinalizeEx();
 }
 
-NSString* MJLuaRunString(NSString* command) {
+NSString *MJLuaRunString(NSString *command) {
     LuaSkin *skin = [LuaSkin sharedWithState:NULL];
-    lua_State* L = skin.L;
+    lua_State *L = skin.L;
     _lua_stackguard_entry(L);
 
     [skin pushLuaRef:refTable ref:evalfn];
@@ -1003,19 +1016,19 @@ NSString* MJLuaRunString(NSString* command) {
     }
 
     size_t len;
-    const char* s = lua_tolstring(L, -1, &len);
-    NSString* str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
+    const char *s = lua_tolstring(L, -1, &len);
+    NSString *str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
     if (str == nil) {
-      lua_pushcfunction(L, core_cleanUTF8) ;
-      lua_pushvalue(L, -2) ;
-      if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
-          s = lua_tolstring(L, -1, &len);
-          str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
-          lua_pop(L, 1) ;
-      } else {
-          str = [[NSString alloc] initWithFormat:@"-- unable to clean for utf8 output: %s", lua_tostring(L, -1)] ;
-          lua_pop(L, 1) ;
-      }
+        lua_pushcfunction(L, core_cleanUTF8);
+        lua_pushvalue(L, -2);
+        if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
+            s = lua_tolstring(L, -1, &len);
+            str = [[NSString alloc] initWithData:[NSData dataWithBytes:s length:len] encoding:NSUTF8StringEncoding];
+            lua_pop(L, 1);
+        } else {
+            str = [[NSString alloc] initWithFormat:@"-- unable to clean for utf8 output: %s", lua_tostring(L, -1)];
+            lua_pop(L, 1);
+        }
     }
     lua_pop(L, 1);
 
@@ -1043,7 +1056,7 @@ NSArray *MJLuaCompletionsForWord(NSString *completionWord) {
 
 // C-Code helper to return current active LuaState. Useful for callbacks to
 // verify stored LuaState still matches active one if GC fails to clear it.
-lua_State* MJGetActiveLuaState() {
+lua_State *MJGetActiveLuaState() {
     LuaSkin *skin = [LuaSkin sharedWithState:NULL];
-  return skin.L ;
+    return skin.L;
 }
