@@ -48,6 +48,20 @@
                ReferencedContainer = "container:LuaSkin/LuaSkin.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "46CF8E012534F9710027E1F7"
+               BuildableName = "libHammerPy.dylib"
+               BlueprintName = "HammerPy"
+               ReferencedContainer = "container:Hammerspoon.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

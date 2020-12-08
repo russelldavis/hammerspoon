@@ -1,3 +1,4 @@
+
 #import "MJLua.h"
 #import "MJConsoleWindowController.h"
 #import "MJUserNotificationManager.h"
@@ -22,6 +23,18 @@
 #import <AppKit/AppKit.h>
 #import <libproc.h>
 #import <dlfcn.h>
+
+#import <Python/Python.h>
+
+
+#ifdef HS_LIB_ONLY
+    #define ERR_IF_LIB_ONLY(L) (lua_pushliteral(L, "This function is only available in the full Hammerspoon app (not the library)"); lua_error(L);)
+#else
+    #define ERR_IF_LIB_ONLY(L)
+#endif
+
+
+PyMODINIT_FUNC PyInit__lupa(void);
 
 @interface MJPreferencesWindowController ()
 - (void) reflectDefaults ;
@@ -55,6 +68,7 @@ void MJLuaSetupLogHandler(void(^blk)(NSString* str)) {
 ///  * If at all possible, please do allow Hammerspoon to upload crash reports to us, it helps a great deal in keeping Hammerspoon stable
 ///  * Our Privacy Policy can be found here: [http://www.hammerspoon.org/privacy.html](http://www.hammerspoon.org/privacy.html)
 static int core_uploadCrashData(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     if (lua_isboolean(L, 1)) { HSSetUploadCrashData(lua_toboolean(L, 1)); }
     lua_pushboolean(L, HSUploadCrashData()) ;
     return 1;
@@ -70,6 +84,7 @@ static int core_uploadCrashData(lua_State* L) {
 /// Returns:
 ///  * True if Hammerspoon is currently (or has just been) set to launch on login or False if Hammerspoon is not.
 static int core_autolaunch(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     if (lua_isboolean(L, 1)) { MJAutoLaunchSet(lua_toboolean(L, 1)); }
     lua_pushboolean(L, MJAutoLaunchGet()) ;
     return 1;
@@ -85,6 +100,7 @@ static int core_autolaunch(lua_State* L) {
 /// Returns:
 ///  * True if the icon is currently set (or has just been) to be visible or False if it is not.
 static int core_menuicon(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     if (lua_isboolean(L, 1)) { MJMenuIconSetVisible(lua_toboolean(L, 1)); }
     lua_pushboolean(L, MJMenuIconVisible()) ;
     return 1;
@@ -106,6 +122,7 @@ static int core_menuicon(lua_State* L) {
 /// Returns:
 ///  * True if the console is currently set (or has just been) to be always on top when visible or False if it is not.
 static int core_consoleontop(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     if (lua_isboolean(L, 1)) { MJConsoleWindowSetAlwaysOnTop(lua_toboolean(L, 1)); }
     lua_pushboolean(L, MJConsoleWindowAlwaysOnTop()) ;
     return 1;
@@ -115,6 +132,7 @@ static int core_consoleontop(lua_State* L) {
 /// Function
 /// Displays the OS X About panel for Hammerspoon; implicitly focuses Hammerspoon.
 static int core_openabout(lua_State* __unused L) {
+    ERR_IF_LIB_ONLY(L)
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     [[NSApplication sharedApplication] orderFrontStandardAboutPanel:nil];
     return 0;
@@ -124,6 +142,7 @@ static int core_openabout(lua_State* __unused L) {
 /// Function
 /// Displays the Hammerspoon Preferences panel; implicitly focuses Hammerspoon.
 static int core_openpreferences(lua_State* __unused L) {
+    ERR_IF_LIB_ONLY(L)
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     [[MJPreferencesWindowController singleton] showWindow: nil];
 
@@ -140,6 +159,7 @@ static int core_openpreferences(lua_State* __unused L) {
 /// Returns:
 ///  * None
 static int core_closepreferences(lua_State* __unused L) {
+    ERR_IF_LIB_ONLY(L)
     [[MJPreferencesWindowController singleton].window orderOut:nil];
     return 0;
 }
@@ -154,6 +174,7 @@ static int core_closepreferences(lua_State* __unused L) {
 /// Returns:
 ///  * None
 static int core_openconsole(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     if (!(lua_isboolean(L,1) && !lua_toboolean(L, 1)))
         [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     [[MJConsoleWindowController singleton] showWindow: nil];
@@ -170,6 +191,7 @@ static int core_openconsole(lua_State* L) {
 /// Returns:
 ///  * None
 static int core_closeconsole(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     [[MJConsoleWindowController singleton].window orderOut:nil];
     return 0;
 }
@@ -197,6 +219,7 @@ static int core_open(lua_State *L) {
 /// Function
 /// Reloads your init-file in a fresh Lua environment.
 static int core_reload(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     dispatch_async(dispatch_get_main_queue(), ^{
         MJLuaReplace();
     });
@@ -437,6 +460,7 @@ static int core_cameraState(lua_State* L) {
 /// Notes:
 ///  * If you are running a non-release or locally compiled version of Hammerspoon then the results of this function are unspecified.
 static int automaticallyChecksForUpdates(lua_State *L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     if (NSClassFromString(@"SUUpdater")) {
         NSString *frameworkPath = [[[NSBundle mainBundle] privateFrameworksPath] stringByAppendingPathComponent:@"Sparkle.framework"];
@@ -488,6 +512,7 @@ static int automaticallyChecksForUpdates(lua_State *L) {
 /// Notes:
 ///  * If you are running a non-release or locally compiled version of Hammerspoon then the results of this function are unspecified.
 static int checkForUpdates(lua_State *L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
 
@@ -528,6 +553,7 @@ static int checkForUpdates(lua_State *L) {
 /// Notes:
 ///  * This is not a live check, it is a cached result of whatever the previous update check found. By default Hammerspoon checks for updates every few hours, but you can also add your own timer to check for updates more frequently with `hs.checkForUpdates()`
 static int updateAvailable(lua_State *L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBREAK];
 
@@ -563,6 +589,7 @@ static int updateAvailable(lua_State *L) {
 /// Notes:
 ///  * The Sparkle framework is included in all regular releases of Hammerspoon but not included if you are running a non-release or locally compiled version of Hammerspoon, so this function can be used as a simple test to determine whether or not you are running a formal release Hammerspoon or not.
 static int canCheckForUpdates(lua_State *L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBREAK];
     BOOL canUpdate = NO ;
@@ -587,6 +614,7 @@ static int canCheckForUpdates(lua_State *L) {
 /// Returns:
 ///  * A boolean, true if dark mode is enabled otherwise false.
 static int preferencesDarkMode(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
 
@@ -649,6 +677,7 @@ static int core_appleScript(lua_State* L) {
 /// Notes:
 ///  * This only refers to dock icon clicks while Hammerspoon is already running. The console window is not opened by launching the app
 static int core_openConsoleOnDockClick(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     LuaSkin *skin = [LuaSkin sharedWithState:L];
     [skin checkArgs:LS_TBOOLEAN|LS_TOPTIONAL, LS_TBREAK];
 
@@ -664,6 +693,7 @@ static int core_openConsoleOnDockClick(lua_State* L) {
 /// Function
 /// Makes Hammerspoon the foreground app.
 static int core_focus(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
     return 0;
 }
@@ -706,6 +736,7 @@ static int core_cleanUTF8(lua_State *L) {
 }
 
 static int core_exit(lua_State* L) {
+    ERR_IF_LIB_ONLY(L)
     [[NSApplication sharedApplication] terminate: nil];
     return 0;
 }

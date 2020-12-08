@@ -42,3 +42,5 @@ xcuserdata/
 *.xccheckout
 *.xcscmblueprint
 
+*.so
+*.egg-info
